@@ -16,11 +16,11 @@ const run = async () => {
 	const PORT = parseInt(env.parsed!.PORT, 10);
 
 	const server = new http.Server((req, res) => {
-		if (!req.headers.origin || !origins.includes(req.headers.origin)) {
-			res.writeHead(403, { 'Content-Type': 'text/plain' });
-			res.end('Forbidden');
-			return;
-		}
+		// if (!req.headers.origin || !origins.includes(req.headers.origin)) {
+		// 	res.writeHead(403, { 'Content-Type': 'text/plain' });
+		// 	res.end('Forbidden');
+		// 	return;
+		// }
 		if (req.method === 'OPTIONS') {
 			res.writeHead(200, {
 				'Access-Control-Allow-Origin': req.headers.origin,
