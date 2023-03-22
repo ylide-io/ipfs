@@ -89,10 +89,8 @@ const run = async () => {
 			});
 			req.pipe(bb);
 		} else if (req.method === 'GET') {
-			console.log('req.url: ', req.url);
 			if (req.url && req.url.startsWith('/file/')) {
 				const hash = new URL(`a://b${req.url}`).pathname.split('/')[2];
-				console.log('hash: ', hash);
 				fetch(`https://ipfs.infura.io:5001/api/v0/cat?arg=${hash}`, {
 					method: 'POST',
 					headers: {
@@ -108,13 +106,13 @@ const run = async () => {
 							});
 							result.body.pipe(res);
 						} else {
-							console.error(`Error downloading file: ${result.status} ${result.statusText}`);
+							console.error(`[${hash}] Error downloading file: ${result.status} ${result.statusText}`);
 							res.writeHead(500, { 'Content-Type': 'text/plain' });
 							res.end('Internal Downloading Error (status)');
 						}
 					})
 					.catch(err => {
-						console.error(`Error downloading file: ${err}`);
+						console.error(`[${hash}] Error downloading file: ${err}`);
 						res.writeHead(500, { 'Content-Type': 'text/plain' });
 						res.end('Internal Downloading Error (fetch)');
 					});
