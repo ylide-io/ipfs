@@ -59,9 +59,17 @@ const run = async () => {
 							result
 								.json()
 								.then(json => {
-									res.writeHead(200, {
-										'Content-Type': 'application/json',
-									});
+									res.writeHead(
+										200,
+										req.headers.origin
+											? {
+													'Access-Control-Allow-Origin': req.headers.origin,
+													'Content-Type': 'application/json',
+											  }
+											: {
+													'Content-Type': 'application/json',
+											  },
+									);
 									res.end(JSON.stringify(json));
 								})
 								.catch(err => {
@@ -101,9 +109,17 @@ const run = async () => {
 				})
 					.then(result => {
 						if (result.status === 200) {
-							res.writeHead(200, {
-								'Content-Type': 'application/octet-stream',
-							});
+							res.writeHead(
+								200,
+								req.headers.origin
+									? {
+											'Access-Control-Allow-Origin': req.headers.origin,
+											'Content-Type': 'application/octet-stream',
+									  }
+									: {
+											'Content-Type': 'application/octet-stream',
+									  },
+							);
 							result.body.pipe(res);
 						} else {
 							console.error(`[${hash}] Error downloading file: ${result.status} ${result.statusText}`);
