@@ -17,13 +17,15 @@ NEW_RELIC_LOG=stdout
 EXPOSE 80
 CMD ["/root/.local/share/pnpm/pnpm", "run", "start"]
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
 COPY ./package.json ./package.json
 COPY ./pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Install node_modules
 RUN /root/.local/share/pnpm/pnpm i --force
+
+ENV NODE_ENV=production
 
 # Copy source code
 COPY . .
