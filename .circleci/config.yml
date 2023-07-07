@@ -1,0 +1,90 @@
+version: 2.1
+
+jobs:
+    build_publish:
+        working_directory: /app
+        docker:
+            - image: docker:24.0.2-git
+        steps:
+            - checkout
+            - setup_remote_docker
+            - restore_cache:
+                  keys:
+                      - v1-{{ .Branch }}
+                  paths:
+                      - /caches/app.tar
+            - restore_cache:
+                  keys:
+                      - v1-gcloud-fixed-alpine
+                  paths:
+                      - /caches/gcloud.tar
+            - run:
+                  name: Load Docker image layer cache
+                  command: |
+                      set +o pipefail
+                      docker load -i /caches/app.tar | true
+                      docker load -i /caches/gcloud.tar | true
+            - run:
+                  name: Extract Google Cloud SDK Docker Token
+                  command: |
+                      export DOCKER_TOKEN=$(echo $GCLOUD_SERVICE_KEY | docker run -i --name gcloud-config google/cloud-sdk:alpine /bin/sh -c "gcloud auth activate-service-account --quiet --key-file=- && gcloud auth print-access-token")
+                      echo $GCLOUD_SERVICE_KEY | docker login -u _json_key --password-stdin https://$DOCKER_REGISTRY_HOST
+            - run:
+                  name: Build application Docker image
+                  command: |
+                      ./ci/scripts/build-docker-image.sh
+            - run:
+                  name: Save Docker image layer cache
+                  command: |
+                      mkdir -p /caches
+                      docker save -o /caches/app.tar $(./ci/scripts/get-docker-image-name.sh)
+                      if [ ! -f "/caches/gcloud.tar" ]; then
+                        docker save -o /caches/gcloud.tar google/cloud-sdk
+                      fi
+            - save_cache:
+                  key: v1-{{ .Branch }}-{{ epoch }}
+                  paths:
+                      - /caches/app.tar
+            - save_cache:
+                  key: v1-gcloud-fixed-alpine
+                  paths:
+                      - /caches/gcloud.tar
+            - run:
+                  name: Push application Docker image
+                  command: |
+                      ./ci/scripts/publish-docker-image.sh
+    deploy:
+        working_directory: /app
+        docker:
+            - image: docker:24.0.2-git
+        steps:
+            - checkout
+            - setup_remote_docker
+            - restore_cache:
+                  keys:
+                      - v1-gcloud-fixed-alpine
+                  paths:
+                      - /caches/gcloud.tar
+            - run:
+                  name: Load gcloud image layer cache
+                  command: |
+                      set +o pipefail
+                      docker load -i /caches/gcloud.tar | true
+            - run:
+                  name: Push application Docker image
+                  command: |
+                      echo $GCLOUD_SERVICE_KEY | docker run -i --name gcloud-config google/cloud-sdk:alpine /bin/sh -c "gcloud auth activate-service-account --quiet --key-file=- && gcloud compute instances update-container $DEPLOY_MACHINE_NAME --zone=$GOOGLE_COMPUTE_ZONE --project=$GOOGLE_PROJECT_ID --container-image=$(./ci/scripts/get-docker-image.sh)$(./ci/scripts/get-docker-args.sh)"
+
+workflows:
+    build:
+        jobs:
+            - build_publish:
+                  filters:
+                      branches:
+                          only:
+                              - main
+            - deploy:
+                  filters:
+                      branches:
+                          only:
+                              - release

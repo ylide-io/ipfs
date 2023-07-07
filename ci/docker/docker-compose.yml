@@ -1,0 +1,8 @@
+version: '3.6'
+
+services:
+    http:
+        platform: linux/amd64
+        image: europe-west3-docker.pkg.dev/ylide-prod/ylide-docker-registry/ylide/golden-backend-app:latest
+        ports:
+            - 7179:80
