@@ -1,10 +1,10 @@
 import busboy from 'busboy';
 import fetch from 'node-fetch';
 import FormData from 'form-data';
-import fs from 'fs';
+import * as fs from 'fs';
 import { Request, Response } from 'express';
 
-import { Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Req, Res, StreamableFile } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { Logger } from '@ylide/backend-scripts';
@@ -88,19 +88,11 @@ export class AppController {
 	async getFile(@Param('hash') hash: string, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
 		if (cachedHashes.includes(hash)) {
 			const stream = fs.createReadStream(`cache/${hash}`);
-			res.writeHead(
-				200,
-				req.headers.origin
-					? {
-							'Access-Control-Allow-Origin': req.headers.origin,
-							'Content-Type': 'application/octet-stream',
-						}
-					: {
-							'Content-Type': 'application/octet-stream',
-						},
-			);
-			stream.pipe(res);
-			return;
+			res.set('Content-Type', 'application/octet-stream');
+			if (req.headers.origin) {
+				res.set('Access-Control-Allow-Origin', req.headers.origin);
+			}
+			return new StreamableFile(stream);
 		}
 
 		try {
@@ -113,18 +105,11 @@ export class AppController {
 				},
 			})
 			if (result.status === 200) {
-				res.writeHead(
-					200,
-					req.headers.origin
-						? {
-								'Access-Control-Allow-Origin': req.headers.origin,
-								'Content-Type': 'application/octet-stream',
-							}
-						: {
-								'Content-Type': 'application/octet-stream',
-							},
-				);
-				result.body.pipe(res);
+				res.set('Content-Type', 'application/octet-stream');
+				if (req.headers.origin) {
+					res.set('Access-Control-Allow-Origin', req.headers.origin);
+				}
+				return new StreamableFile(result.body);
 			} else {
 				console.error(`[${hash}] Error downloading file: ${result.status} ${result.statusText}`);
 				res.writeHead(500, { 'Content-Type': 'text/plain' });

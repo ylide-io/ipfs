@@ -1,10 +1,11 @@
 import fetch from 'node-fetch';
-import fs from 'fs';
+import * as fs from 'fs';
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { cachedHashes } from './constants';
+import { Logger } from '@ylide/backend-scripts';
 
 @Injectable()
 export class AppService {
