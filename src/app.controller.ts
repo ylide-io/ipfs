@@ -17,7 +17,11 @@ export class AppController {
 	ipfsSecretKey: string;
 	ipfsApi: string;
 
-	constructor(private readonly appService: AppService, private readonly logger: Logger, private readonly config: ConfigService) {
+	constructor(
+		private readonly appService: AppService,
+		private readonly logger: Logger,
+		private readonly config: ConfigService,
+	) {
 		this.ipfsPublicKey = this.config.get<string>('ipfs.publicKey');
 		this.ipfsSecretKey = this.config.get<string>('ipfs.secretKey');
 		this.ipfsApi = this.config.get<string>('ipfs.api');
@@ -28,13 +32,13 @@ export class AppController {
 	async uploadFile(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
 		const bb = busboy({ headers: req.headers });
 		let filesCount = 0;
-		bb.on('file', async (name, file, info) => {
+		bb.on('file', async (name, file) => {
 			if (name !== 'file' || filesCount !== 0) {
 				return;
 			}
 			filesCount++;
 
-			const { filename, encoding, mimeType } = info;
+			// const { filename, encoding, mimeType } = info;
 
 			const formData = new FormData();
 			formData.append('file', file);
@@ -57,10 +61,10 @@ export class AppController {
 							? {
 									'Access-Control-Allow-Origin': req.headers.origin,
 									'Content-Type': 'application/json',
-								}
+							  }
 							: {
 									'Content-Type': 'application/json',
-								},
+							  },
 					);
 					res.end(JSON.stringify(json));
 				} else {
@@ -83,6 +87,12 @@ export class AppController {
 		req.pipe(bb);
 	}
 
+	@Get('/health')
+	@ApiOperation({ summary: `Health check` })
+	async healthCheck() {
+		return 'OK';
+	}
+
 	@Get('/file/:hash')
 	@ApiOperation({ summary: `Get file from IPFS` })
 	async getFile(@Param('hash') hash: string, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
@@ -103,7 +113,7 @@ export class AppController {
 						'base64',
 					)}`,
 				},
-			})
+			});
 			if (result.status === 200) {
 				res.set('Content-Type', 'application/octet-stream');
 				if (req.headers.origin) {

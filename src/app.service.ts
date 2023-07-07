@@ -9,7 +9,6 @@ import { Logger } from '@ylide/backend-scripts';
 
 @Injectable()
 export class AppService {
-
 	ipfsPublicKey: string;
 	ipfsSecretKey: string;
 	ipfsApi: string;
@@ -19,7 +18,7 @@ export class AppService {
 		this.ipfsSecretKey = this.config.get<string>('ipfs.secretKey');
 		this.ipfsApi = this.config.get<string>('ipfs.api');
 	}
-	
+
 	async init() {
 		if (!fs.existsSync('cache')) {
 			fs.mkdirSync('cache');
@@ -30,7 +29,9 @@ export class AppService {
 				const response = await fetch(`https://ipfs.infura.io:5001/api/v0/cat?arg=${hash}`, {
 					method: 'POST',
 					headers: {
-						Authorization: `Basic ${Buffer.from(`${this.ipfsPublicKey}:${this.ipfsSecretKey}`).toString('base64')}`,
+						Authorization: `Basic ${Buffer.from(`${this.ipfsPublicKey}:${this.ipfsSecretKey}`).toString(
+							'base64',
+						)}`,
 					},
 				});
 				if (response.status !== 200) {

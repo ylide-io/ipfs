@@ -6,12 +6,15 @@ import * as configuration from './config';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-	imports: [MainModule, ConfigModule.forRoot({
-		isGlobal: true,
-		load: [configuration.configuration],
-		validationSchema: configuration.validationSchema,
-		validationOptions: configuration.validationOptions,
-	}),],
+	imports: [
+		MainModule,
+		ConfigModule.forRoot({
+			isGlobal: true,
+			load: [configuration.configuration],
+			validationSchema: configuration.validationSchema,
+			validationOptions: configuration.validationOptions,
+		}),
+	],
 	controllers: [AppController],
 	providers: [AppService],
 })
