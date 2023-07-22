@@ -11,7 +11,9 @@ async function bootstrap() {
 
 	const mainModule = app.get(MainModule);
 
-	await mainModule.setupApp(app);
+	await mainModule.setupApp(app, {
+		corsOrigins: true as any,
+	});
 
 	const service = app.get(AppService);
 	const config = app.get(ConfigService);
