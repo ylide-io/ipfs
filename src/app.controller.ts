@@ -32,6 +32,7 @@ export class AppController {
 	async uploadFile(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
 		const bb = busboy({ headers: req.headers });
 		let filesCount = 0;
+		let sent = false;
 		bb.on('file', async (name, file) => {
 			if (name !== 'file' || filesCount !== 0) {
 				return;
@@ -55,6 +56,7 @@ export class AppController {
 				});
 				if (result.status === 200) {
 					const json = await result.json();
+					sent = true;
 					res.writeHead(
 						200,
 						req.headers.origin
@@ -69,17 +71,19 @@ export class AppController {
 					res.end(JSON.stringify(json));
 				} else {
 					this.logger.error(`Error uploading file: ${result.status} ${result.statusText}`);
+					sent = true;
 					res.writeHead(500, { 'Content-Type': 'text/plain' });
 					res.end('Internal Uploading Error (status)');
 				}
 			} catch (err) {
 				this.logger.error(`Error uploading file: ${err}`);
+				sent = true;
 				res.writeHead(500, { 'Content-Type': 'text/plain' });
 				res.end('Internal Uploading Error (fetch)');
 			}
 		});
 		bb.on('finish', () => {
-			if (filesCount === 0) {
+			if (filesCount === 0 && !sent) {
 				res.writeHead(400, 'Bad Request');
 				res.end();
 			}
