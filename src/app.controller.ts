@@ -69,27 +69,35 @@ export class AppController {
 									'Content-Type': 'application/json',
 							  },
 					);
+					console.log(`2`);
 					res.end(JSON.stringify(json));
+					console.log(`3`);
 				} else {
 					console.error(`Error uploading file: ${result.status} ${result.statusText}`);
 					sent = true;
-					console.log(`2`);
+					console.log(`4`);
 					res.writeHead(500, { 'Content-Type': 'text/plain' });
+					console.log(`5`);
 					res.end('Internal Uploading Error (status)');
+					console.log(`6`);
 				}
 			} catch (err) {
 				console.error(`Error uploading file: ${err}`);
 				sent = true;
-				console.log(`3`);
+				console.log(`7`);
 				res.writeHead(500, { 'Content-Type': 'text/plain' });
+				console.log(`8`);
 				res.end('Internal Uploading Error (fetch)');
+				console.log(`9`);
 			}
 		});
 		bb.on('finish', () => {
 			if (filesCount === 0 && !sent) {
-				console.log(`4`);
+				console.log(`10`);
 				res.writeHead(400, 'Bad Request');
+				console.log(`11`);
 				res.end();
+				console.log(`12`);
 			}
 		});
 		req.pipe(bb);
