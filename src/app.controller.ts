@@ -1,6 +1,6 @@
 import * as busboy from 'busboy';
 import fetch from 'node-fetch';
-import FormData from 'form-data';
+import * as FormData from 'form-data';
 import * as fs from 'fs';
 import { Request, Response } from 'express';
 
