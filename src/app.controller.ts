@@ -1,4 +1,4 @@
-import busboy from 'busboy';
+import * as busboy from 'busboy';
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import * as fs from 'fs';
