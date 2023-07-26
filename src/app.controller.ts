@@ -57,6 +57,7 @@ export class AppController {
 				if (result.status === 200) {
 					const json = await result.json();
 					sent = true;
+					this.logger.log(`1`);
 					res.writeHead(
 						200,
 						req.headers.origin
@@ -72,18 +73,21 @@ export class AppController {
 				} else {
 					this.logger.error(`Error uploading file: ${result.status} ${result.statusText}`);
 					sent = true;
+					this.logger.log(`2`);
 					res.writeHead(500, { 'Content-Type': 'text/plain' });
 					res.end('Internal Uploading Error (status)');
 				}
 			} catch (err) {
 				this.logger.error(`Error uploading file: ${err}`);
 				sent = true;
+				this.logger.log(`3`);
 				res.writeHead(500, { 'Content-Type': 'text/plain' });
 				res.end('Internal Uploading Error (fetch)');
 			}
 		});
 		bb.on('finish', () => {
 			if (filesCount === 0 && !sent) {
+				this.logger.log(`4`);
 				res.writeHead(400, 'Bad Request');
 				res.end();
 			}
