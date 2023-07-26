@@ -33,74 +33,80 @@ export class AppController {
 		const bb = busboy({ headers: req.headers });
 		let filesCount = 0;
 		let sent = false;
-		bb.on('file', async (name, file) => {
-			if (name !== 'file' || filesCount !== 0) {
-				return;
-			}
-			filesCount++;
-
-			// const { filename, encoding, mimeType } = info;
-
-			const formData = new FormData();
-			formData.append('file', file);
-
-			try {
-				const result = await fetch(`https://ipfs.infura.io:5001/api/v0/add?pin=true`, {
-					method: 'POST',
-					headers: {
-						Authorization: `Basic ${Buffer.from(`${this.ipfsPublicKey}:${this.ipfsSecretKey}`).toString(
-							'base64',
-						)}`,
-					},
-					body: formData,
-				});
-				if (result.status === 200) {
-					const json = await result.json();
-					sent = true;
-					console.log(`1`);
-					res.writeHead(
-						200,
-						req.headers.origin
-							? {
-									'Access-Control-Allow-Origin': req.headers.origin,
-									'Content-Type': 'application/json',
-							  }
-							: {
-									'Content-Type': 'application/json',
-							  },
-					);
-					console.log(`2`);
-					res.end(JSON.stringify(json));
-					console.log(`3`);
-				} else {
-					console.error(`Error uploading file: ${result.status} ${result.statusText}`);
-					sent = true;
-					console.log(`4`);
-					res.writeHead(500, { 'Content-Type': 'text/plain' });
-					console.log(`5`);
-					res.end('Internal Uploading Error (status)');
-					console.log(`6`);
+		await new Promise<void>(resolve => {
+			bb.on('file', async (name, file) => {
+				if (name !== 'file' || filesCount !== 0) {
+					return;
 				}
-			} catch (err) {
-				console.error(`Error uploading file: ${err}`);
-				sent = true;
-				console.log(`7`);
-				res.writeHead(500, { 'Content-Type': 'text/plain' });
-				console.log(`8`);
-				res.end('Internal Uploading Error (fetch)');
-				console.log(`9`);
-			}
+				filesCount++;
+
+				// const { filename, encoding, mimeType } = info;
+
+				const formData = new FormData();
+				formData.append('file', file);
+
+				try {
+					const result = await fetch(`https://ipfs.infura.io:5001/api/v0/add?pin=true`, {
+						method: 'POST',
+						headers: {
+							Authorization: `Basic ${Buffer.from(`${this.ipfsPublicKey}:${this.ipfsSecretKey}`).toString(
+								'base64',
+							)}`,
+						},
+						body: formData,
+					});
+					if (result.status === 200) {
+						const json = await result.json();
+						sent = true;
+						console.log(`1`);
+						res.writeHead(
+							200,
+							req.headers.origin
+								? {
+										'Access-Control-Allow-Origin': req.headers.origin,
+										'Content-Type': 'application/json',
+								  }
+								: {
+										'Content-Type': 'application/json',
+								  },
+						);
+						console.log(`2`);
+						res.end(JSON.stringify(json));
+						console.log(`3`);
+						resolve();
+					} else {
+						console.error(`Error uploading file: ${result.status} ${result.statusText}`);
+						sent = true;
+						console.log(`4`);
+						res.writeHead(500, { 'Content-Type': 'text/plain' });
+						console.log(`5`);
+						res.end('Internal Uploading Error (status)');
+						console.log(`6`);
+						resolve();
+					}
+				} catch (err) {
+					console.error(`Error uploading file: ${err}`);
+					sent = true;
+					console.log(`7`);
+					res.writeHead(500, { 'Content-Type': 'text/plain' });
+					console.log(`8`);
+					res.end('Internal Uploading Error (fetch)');
+					console.log(`9`);
+					resolve();
+				}
+			});
+			bb.on('finish', () => {
+				if (filesCount === 0 && !sent) {
+					console.log(`10`);
+					res.writeHead(400, 'Bad Request');
+					console.log(`11`);
+					res.end();
+					console.log(`12`);
+					resolve();
+				}
+			});
+			req.pipe(bb);
 		});
-		bb.on('finish', () => {
-			if (filesCount === 0 && !sent) {
-				console.log(`10`);
-				res.writeHead(400, 'Bad Request');
-				console.log(`11`);
-				res.end();
-				console.log(`12`);
-			}
-		});
-		req.pipe(bb);
 	}
 
 	@Get('/health')
