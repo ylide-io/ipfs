@@ -115,9 +115,14 @@ export class AppController {
 		return 'OK';
 	}
 
+	waitingFor: Record<string, Promise<void>> = {};
+
 	@Get('/file/:hash')
 	@ApiOperation({ summary: `Get file from IPFS` })
 	async getFile(@Param('hash') hash: string, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+		if (this.waitingFor[hash]) {
+			await this.waitingFor[hash];
+		}
 		if (cachedHashes.includes(hash)) {
 			const stream = fs.createReadStream(`cache/${hash}`);
 			res.set('Content-Type', 'application/octet-stream');
@@ -125,62 +130,71 @@ export class AppController {
 				res.set('Access-Control-Allow-Origin', req.headers.origin);
 			}
 			return new StreamableFile(stream);
-		}
-
-		try {
-			const result = await fetch(`https://ipfs.infura.io:5001/api/v0/cat?arg=${hash}`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Basic ${Buffer.from(`${this.ipfsPublicKey}:${this.ipfsSecretKey}`).toString(
-						'base64',
-					)}`,
-				},
-			});
-			if (result.status === 200) {
-				res.set('Content-Type', 'application/octet-stream');
-				if (req.headers.origin) {
-					res.set('Access-Control-Allow-Origin', req.headers.origin);
-				}
-				const isSaved = await new Promise<boolean>(resolve => {
-					const fileStream = fs.createWriteStream(`cache/${hash}`);
-					result.body.pipe(fileStream);
-					// when saving is finished, send the response to the client:
-					fileStream.on('finish', () => {
-						console.log(`[${hash}] File saved`);
-						cachedHashes.push(hash);
-						fileStream.close();
-						resolve(true);
-					});
-					fileStream.on('error', err => {
-						console.error(`[${hash}] Error saving file: ${err}`);
-						if (!res.destroyed) {
-							res.end();
-							resolve(false);
+		} else {
+			this.waitingFor[hash] = new Promise<any>(resolve =>
+				(async () => {
+					try {
+						const result = await fetch(`https://ipfs.infura.io:5001/api/v0/cat?arg=${hash}`, {
+							method: 'POST',
+							headers: {
+								Authorization: `Basic ${Buffer.from(
+									`${this.ipfsPublicKey}:${this.ipfsSecretKey}`,
+								).toString('base64')}`,
+							},
+						});
+						if (result.status === 200) {
+							res.set('Content-Type', 'application/octet-stream');
+							if (req.headers.origin) {
+								res.set('Access-Control-Allow-Origin', req.headers.origin);
+							}
+							const isSaved = await new Promise<boolean>(resolve => {
+								const fileStream = fs.createWriteStream(`cache/${hash}`);
+								result.body.pipe(fileStream);
+								// when saving is finished, send the response to the client:
+								fileStream.on('finish', () => {
+									console.log(`[${hash}] File saved`);
+									cachedHashes.push(hash);
+									fileStream.close();
+									resolve(true);
+								});
+								fileStream.on('error', err => {
+									console.error(`[${hash}] Error saving file: ${err}`);
+									if (!res.destroyed) {
+										res.end();
+										resolve(false);
+									} else {
+										resolve(false);
+									}
+								});
+							});
+							if (!isSaved) {
+								return;
+							}
+							return new StreamableFile(fs.createReadStream(`cache/${hash}`)).setErrorHandler(
+								(err, response) => {
+									if (err.message.includes('Premature close')) {
+										console.error(`[${hash}] Error downloading file: ${err}`);
+										if (!response.destroyed) {
+											response.end();
+										}
+									}
+								},
+							);
 						} else {
-							resolve(false);
+							console.error(`[${hash}] Error downloading file: ${result.status} ${result.statusText}`);
+							res.writeHead(500, { 'Content-Type': 'text/plain' });
+							res.end('Internal Downloading Error (status)');
 						}
-					});
-				});
-				if (!isSaved) {
-					return;
-				}
-				return new StreamableFile(fs.createReadStream(`cache/${hash}`)).setErrorHandler((err, response) => {
-					if (err.message.includes('Premature close')) {
+					} catch (err) {
 						console.error(`[${hash}] Error downloading file: ${err}`);
-						if (!response.destroyed) {
-							response.end();
-						}
+						res.writeHead(500, { 'Content-Type': 'text/plain' });
+						res.end('Internal Downloading Error (fetch)');
 					}
-				});
-			} else {
-				console.error(`[${hash}] Error downloading file: ${result.status} ${result.statusText}`);
-				res.writeHead(500, { 'Content-Type': 'text/plain' });
-				res.end('Internal Downloading Error (status)');
-			}
-		} catch (err) {
-			console.error(`[${hash}] Error downloading file: ${err}`);
-			res.writeHead(500, { 'Content-Type': 'text/plain' });
-			res.end('Internal Downloading Error (fetch)');
+				})().then(resolve),
+			);
+			const result = await this.waitingFor[hash];
+			delete this.waitingFor[hash];
+			return result;
 		}
 	}
 }
