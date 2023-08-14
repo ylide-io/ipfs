@@ -129,7 +129,16 @@ export class AppController {
 			if (req.headers.origin) {
 				res.set('Access-Control-Allow-Origin', req.headers.origin);
 			}
-			return new StreamableFile(stream);
+			return new StreamableFile(stream).setErrorHandler((err, response) => {
+				if (err.message.includes('Premature close')) {
+					// do nothing
+				} else {
+					console.error(`[${hash}] Error downloading file: ${err}`);
+				}
+				if (!response.destroyed) {
+					response.end();
+				}
+			});
 		} else {
 			this.waitingFor[hash] = new Promise<any>(resolve =>
 				(async () => {
@@ -173,10 +182,12 @@ export class AppController {
 							return new StreamableFile(fs.createReadStream(`cache/${hash}`)).setErrorHandler(
 								(err, response) => {
 									if (err.message.includes('Premature close')) {
+										// do nothing
+									} else {
 										console.error(`[${hash}] Error downloading file: ${err}`);
-										if (!response.destroyed) {
-											response.end();
-										}
+									}
+									if (!response.destroyed) {
+										response.end();
 									}
 								},
 							);
