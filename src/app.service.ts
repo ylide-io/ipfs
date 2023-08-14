@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { cachedHashes } from './constants';
+import { cachedHashes, mustBeCachedHashes } from './constants';
 import { Logger } from '@ylide/backend-scripts';
 
 @Injectable()
@@ -24,7 +24,7 @@ export class AppService {
 			fs.mkdirSync('cache');
 		}
 
-		for (const hash of cachedHashes) {
+		for (const hash of mustBeCachedHashes) {
 			if (!fs.existsSync(`cache/${hash}`)) {
 				const response = await fetch(`https://ipfs.infura.io:5001/api/v0/cat?arg=${hash}`, {
 					method: 'POST',
@@ -40,6 +40,7 @@ export class AppService {
 				}
 				const stream = fs.createWriteStream(`cache/${hash}`);
 				response.body.pipe(stream);
+				cachedHashes.push(hash);
 			}
 		}
 	}

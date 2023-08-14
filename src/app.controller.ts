@@ -141,7 +141,37 @@ export class AppController {
 				if (req.headers.origin) {
 					res.set('Access-Control-Allow-Origin', req.headers.origin);
 				}
-				return new StreamableFile(result.body);
+				const isSaved = await new Promise<boolean>(resolve => {
+					const fileStream = fs.createWriteStream(`cache/${hash}`);
+					result.body.pipe(fileStream);
+					// when saving is finished, send the response to the client:
+					fileStream.on('finish', () => {
+						console.log(`[${hash}] File saved`);
+						cachedHashes.push(hash);
+						fileStream.close();
+						resolve(true);
+					});
+					fileStream.on('error', err => {
+						console.error(`[${hash}] Error saving file: ${err}`);
+						if (!res.destroyed) {
+							res.end();
+							resolve(false);
+						} else {
+							resolve(false);
+						}
+					});
+				});
+				if (!isSaved) {
+					return;
+				}
+				return new StreamableFile(fs.createReadStream(`cache/${hash}`)).setErrorHandler((err, response) => {
+					if (err.message.includes('Premature close')) {
+						console.error(`[${hash}] Error downloading file: ${err}`);
+						if (!response.destroyed) {
+							response.end();
+						}
+					}
+				});
 			} else {
 				console.error(`[${hash}] Error downloading file: ${result.status} ${result.statusText}`);
 				res.writeHead(500, { 'Content-Type': 'text/plain' });

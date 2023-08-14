@@ -1,4 +1,6 @@
-export const cachedHashes: string[] = [
+export const cachedHashes: string[] = [];
+
+export const mustBeCachedHashes: string[] = [
 	'QmPNxHsuCpjCoUx8hvanCdzgwQH5CcXcUusvJ2cLyYz8r4',
 	'QmUvZc5jmPa5GK7R5KATH5i4n9uUQPh8vPC9k7oB9oMdER',
 	'QmdyTMTvKZLg33aRy3Y4ELDu5mn7pvcFbLL8KmSxhM96YR',
